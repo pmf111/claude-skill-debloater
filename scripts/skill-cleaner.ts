@@ -367,6 +367,31 @@ function groupBy<T>(items: T[], key: (item: T) => string): Map<string, T[]> {
   return m;
 }
 
+// Rule-based description compressor: keep the first sentence + any quoted
+// trigger phrases. Drops everything else. Cap output around 200 chars.
+function compressDescription(description: string, cap = 200): string {
+  if (description.length <= cap) return description;
+  const trimmed = description.trim();
+  const firstSentenceMatch = trimmed.match(/^[^.!?]{1,180}[.!?]/);
+  const firstSentence = (firstSentenceMatch?.[0] ?? trimmed.slice(0, 140)).trim();
+  const quoted = [...trimmed.matchAll(/"([^"]{2,60})"/g)].map((m) => m[1]!);
+  const uniqueQuoted = [...new Set(quoted.map((q) => q.toLowerCase()))]
+    .map((lower) => quoted.find((q) => q.toLowerCase() === lower)!);
+  let out = firstSentence;
+  if (uniqueQuoted.length > 0) {
+    let trigger = ` Triggers: `;
+    const parts: string[] = [];
+    for (const phrase of uniqueQuoted) {
+      const next = parts.length === 0 ? `"${phrase}"` : `, "${phrase}"`;
+      if (out.length + trigger.length + parts.join("").length + next.length + 1 > cap) break;
+      parts.push(next);
+    }
+    if (parts.length > 0) out += trigger + parts.join("");
+  }
+  if (out.length > cap) out = out.slice(0, cap - 1).trim() + "…";
+  return out;
+}
+
 function render(skills: Skill[], usage: Map<string, Usage>, logs: string[], roots: string[]): string {
   const considered = skills.filter((s) => INCLUDE_DISABLED || s.enabled);
   const ctx = modelContext();
@@ -441,9 +466,15 @@ function render(skills: Skill[], usage: Map<string, Usage>, logs: string[], root
   out.push("## Long Descriptions (>=200 chars)", "");
   if (longDescriptions.length === 0) out.push("- none");
   for (const s of longDescriptions) {
-    out.push(`- ${s.name} (${[...s.description].length} chars, ${num(tokenCost(skillLine(s)))} tok)`);
+    const suggested = compressDescription(s.description);
+    const savedChars = [...s.description].length - [...suggested].length;
+    const before = tokenCost(skillLine(s));
+    const after = tokenCost(skillLine({ ...s, description: suggested }));
+    out.push(`- ${s.name} (${[...s.description].length} chars, ${num(before)} tok)`);
     out.push(`  path: ${s.path}`);
-    out.push(`  current: ${s.description}`);
+    out.push(`  current:   ${s.description}`);
+    out.push(`  suggested: ${suggested}`);
+    out.push(`  savings:   -${savedChars} chars, -${num(before - after)} tok`);
   }
   out.push("");
 
