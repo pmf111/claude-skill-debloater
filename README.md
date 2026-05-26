@@ -1,4 +1,4 @@
-# claude-skill-debloater
+# Claude Skill Debloater
 
 **Audit your Claude Code skills. Find out what they actually cost.**
 
