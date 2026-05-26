@@ -1,4 +1,4 @@
-# debloater
+# claude-skill-debloater
 
 **Audit your Claude Code skills. Find out what they actually cost.**
 
@@ -50,7 +50,7 @@ For subscribers, the equivalent saving is in the form of:
 ## Install
 
 ```bash
-git clone https://github.com/pmf111/debloater ~/.claude/skills/skill-cleaner
+git clone https://github.com/pmf111/claude-skill-debloater ~/.claude/skills/skill-cleaner
 ```
 
 Requires Node 22+ (uses `--experimental-strip-types` to run the `.ts` file directly with no compile step).
